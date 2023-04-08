@@ -1,0 +1,56 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://libraries.minecraft.net'
+    }
+}
+
+dependencies {
+    // StringTemplate
+    implementation 'org.antlr:ST4:4.3.4'
+
+    // OpenAI Kotlin
+    implementation 'com.aallam.openai:openai-client:3.2.0'
+
+    // Ktor client, required by OpenAI Kotlin
+    implementation "io.ktor:ktor-client-java:+"
+
+    // JTokkit
+    implementation 'com.knuddels:jtokkit:+'
+
+    // JLine
+    implementation 'org.jline:jline:+'
+
+    // Kotlin Coroutines / Sync
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0-Beta'
+
+    // SLF4J
+    implementation 'org.slf4j:slf4j-api:+'
+
+    // JSON path
+    implementation 'com.nfeld.jsonpathkt:jsonpathkt:+'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:+'
+
+    // Mojang's Brigadier
+    implementation 'com.mojang:brigadier:1.0.18'
+
+    // Discord bot library JDA
+    implementation 'net.dv8tion:JDA:+'
+
+    // JNA
+    implementation 'net.java.dev.jna:jna:5.12.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
+}
+
+test {
+    useJUnitPlatform()
+}
