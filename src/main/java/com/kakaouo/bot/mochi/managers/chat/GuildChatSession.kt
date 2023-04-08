@@ -13,7 +13,7 @@ class GuildChatSession(guild: Guild) : AbstractChatSession<Guild>(guild) {
     }
 
     override fun defaultAssistantMessageContent(name: String): String {
-        return "喵嗚～大家好啊！有什麼我可以幫助你們的嗎？(*´∀`)~♥"
+        return "喵嗚～大家好啊！有什麼我可以跟你們聊的嗎？(*´∀`)~♥"
     }
 
     override fun buildSystemPrompt(sb: StringBuilder) {

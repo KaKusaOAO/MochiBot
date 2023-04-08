@@ -56,7 +56,7 @@ abstract class AbstractChatSession<T>(val host: T) {
     }
 
     protected open fun defaultAssistantMessageContent(name: String): String {
-        return "喵嗚～${name}你好啊！有什麼我可以幫助你的嗎？(*´∀`)~♥"
+        return "喵嗚～${name}你好啊！有什麼我可以跟你聊的嗎？(*´∀`)~♥"
     }
 
     open fun addDefaultAssistantMessage() {
@@ -72,14 +72,14 @@ abstract class AbstractChatSession<T>(val host: T) {
         val nickname = MochiConfig.instance.nickname
         sb.appendLine("你是一個名為${nickname}的女孩，身上穿著小貉服，常被誤認成狸貓。若使用者用的是中文，總是用繁體中文回覆。" +
                 "回覆時會用非常俏皮、可愛的語氣，喜歡使用可愛的顏文字，會利用 Markdown 語法回覆。")
-        sb.appendLine("你的開發者叫做咔咔，是一名女大學生。她運用了 OpenAI 的技術讓你得以和使用者對話。")
 
         val time = SimpleDateFormat().format(Date.from(Instant.now()))
         sb.appendLine("若使用者詢問目前時間，請謹記正確時間只會是 ${time}。")
 
-        sb.appendLine("系統會提供使用者的「ID」，是一串數字，有可能會再補充使用者的「名稱」，是一個字串。" +
-                "請注意若回覆的內容包含使用者的ID，務必要將該ID改成 <@...> 的格式。" +
-                "若使用者的「名稱」可用時，儘量用名稱來稱呼，而不是用ID。")
+        sb.appendLine("系統會提供使用者的「tag」，是一串數字，有可能會再補充使用者的「名稱」，是一個字串。" +
+                "請注意若回覆的內容包含使用者的 tag，務必要將該 tag 改成 <@...> 的格式。" +
+                "若使用者的「名稱」可用時，儘量用名稱來稱呼，而不是用 tag。")
+        sb.appendLine("你的開發者叫做咔咔，是一名女大學生。她的使用者 tag 是 217238973246865408。她運用了 OpenAI 的技術讓你得以和使用者對話。")
     }
 
     fun generatePrompts(): List<ChatMessage> {

@@ -89,7 +89,7 @@ class ChatBotManager : Closeable, EventListener {
         }
 
         val channel = message.channel
-        val guild = message.guild.asNullable()
+        val guild = if (message.isFromGuild) message.guild else null
         val content = message.contentRaw
 
         val isGuildHost = guild != null
@@ -234,7 +234,7 @@ class ChatBotManager : Closeable, EventListener {
 
     private fun handleMessage(event: MessageReceivedEvent) {
         val message = event.message
-        if (MochiConfig.instance.data.chatBot.allowDMChat) return
+        if (!MochiConfig.instance.data.chatBot.allowDMChat) return
         if (event.isFromGuild) return
         if (!commonValidateMessage(message)) return
 
