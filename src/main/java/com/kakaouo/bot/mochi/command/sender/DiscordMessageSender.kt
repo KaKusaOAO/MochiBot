@@ -1,7 +1,7 @@
 package com.kakaouo.bot.mochi.command.sender
 
 import com.kakaouo.bot.mochi.Mochi
-import com.kakaouo.bot.mochi.utils.Utils.toCoroutine
+import kotlinx.coroutines.future.await
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.Message.MentionType
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -35,6 +35,6 @@ class DiscordMessageSender(override val source: Message) : IDiscordCommandSender
             builder.setComponents(component)
         }
 
-        source.reply(builder.build()).submit().toCoroutine()
+        source.reply(builder.build()).submit().await()
     }
 }

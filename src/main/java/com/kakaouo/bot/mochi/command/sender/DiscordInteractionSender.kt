@@ -1,14 +1,16 @@
 package com.kakaouo.bot.mochi.command.sender
 
 import com.kakaouo.bot.mochi.Mochi
-import com.kakaouo.bot.mochi.utils.Utils.toCoroutine
+import kotlinx.coroutines.future.await
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.CommandInteraction
+import net.dv8tion.jda.api.interactions.commands.CommandInteractionPayload
 import net.dv8tion.jda.api.interactions.components.LayoutComponent
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import net.dv8tion.jda.api.utils.messages.MessageEditBuilder
 
-class DiscordInteractionSender(val interaction: CommandInteraction): IDiscordCommandSender {
+class DiscordInteractionSender(private val interaction: CommandInteractionPayload): IDiscordCommandSender, IDeferrableSender {
     override val author get() = interaction.user
     override val member get() = interaction.member
     override val channel get() = interaction.messageChannel
@@ -17,11 +19,17 @@ class DiscordInteractionSender(val interaction: CommandInteraction): IDiscordCom
     override val i18n get() = Mochi.instance.getI18nFor(interaction.userLocale)
 
     private var deferred = false
+    private var isFollowup = false
 
-    suspend fun defer() {
+    override suspend fun defer() {
+        defer(false)
+    }
+
+    suspend fun defer(ephemeral: Boolean) {
+        if (interaction !is CommandInteraction) return
         if (deferred) return
 
-        interaction.deferReply().submit().toCoroutine()
+        interaction.deferReply(ephemeral).submit().await()
         deferred = true
     }
 
@@ -32,13 +40,14 @@ class DiscordInteractionSender(val interaction: CommandInteraction): IDiscordCom
         component: LayoutComponent?,
         allowedMentions: Collection<Message.MentionType>?
     ) {
+        if (interaction !is CommandInteraction) return
         if (!deferred) {
-            interaction.deferReply(ephemeral).submit().toCoroutine()
+            interaction.deferReply(ephemeral).submit().await()
             deferred = true
         }
 
-        val builder = MessageEditBuilder()
-            .setContent(text)
+        val builder = if (isFollowup) MessageCreateBuilder() else MessageEditBuilder()
+        builder.setContent(text)
             .setAllowedMentions(allowedMentions)
 
         if (embed != null) {
@@ -49,6 +58,16 @@ class DiscordInteractionSender(val interaction: CommandInteraction): IDiscordCom
             builder.setComponents(component)
         }
 
-        interaction.hook.editOriginal(builder.build()).submit().toCoroutine()
+        val hook = interaction.hook
+        when (builder) {
+            is MessageCreateBuilder -> {
+                hook.setEphemeral(ephemeral)
+                hook.sendMessage(builder.build()).submit().await()
+            }
+            is MessageEditBuilder -> {
+                hook.editOriginal(builder.build()).submit().await()
+                isFollowup = true
+            }
+        }
     }
 }

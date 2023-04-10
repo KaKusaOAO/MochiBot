@@ -6,8 +6,9 @@ import com.mojang.brigadier.arguments.ArgumentType
 import net.dv8tion.jda.api.entities.Role
 
 class RoleArgument : ArgumentType<Role>, ISnowflakeArgument {
-    override fun parse(reader: StringReader): Role? {
+    override fun parse(reader: StringReader): Role {
         val snowflake = reader.readSnowflake()
-        return Mochi.instance.client.getRoleById(snowflake)
+        return Mochi.instance.client.getRoleById(snowflake) ?:
+            throw IllegalArgumentException("Role $snowflake not found")
     }
 }

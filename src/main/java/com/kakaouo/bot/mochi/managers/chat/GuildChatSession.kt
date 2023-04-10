@@ -1,12 +1,10 @@
 package com.kakaouo.bot.mochi.managers.chat
 
 import com.aallam.openai.api.BetaOpenAI
-import com.aallam.openai.api.chat.ChatRole
-import com.kakaouo.bot.mochi.utils.Utils
+import com.kakaouo.mochi.utils.Utils
 import net.dv8tion.jda.api.entities.Guild
 import java.io.File
 
-@OptIn(BetaOpenAI::class)
 class GuildChatSession(guild: Guild) : AbstractChatSession<Guild>(guild) {
     override fun getChatHostId(): String {
         return host.id
@@ -30,6 +28,4 @@ class GuildChatSession(guild: Guild) : AbstractChatSession<Guild>(guild) {
             sb.appendLine(userInfoFile.readText())
         }
     }
-
-
 }

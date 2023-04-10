@@ -1,20 +1,24 @@
 package com.kakaouo.bot.mochi.command.sender
 
+import com.kakaouo.bot.mochi.Mochi
+import com.kakaouo.bot.mochi.utils.MochiUtils.asMember
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel
 
 class CommandSource {
-    var sender: ICommandSender? private set
+    var sender: ICommandSender private set
     var user: User?
     var guild: Guild?
+    val member get() = user.asMember(guild)
     var channel: MessageChannel?
     var voiceChannel: AudioChannel?
+    val guildManager get() = Mochi.instance.getGuildManager(guild)
+    val i18n get() = sender.i18n
 
     constructor(
-        sender: ICommandSender? = null,
+        sender: ICommandSender,
         user: User? = null,
         guild: Guild? = null,
         channel: MessageChannel? = null,
@@ -45,9 +49,8 @@ class CommandSource {
         guild = sender.guild
         channel = sender.channel
 
-        if (author is Member) {
-            voiceChannel = author.voiceState?.channel
-        }
+        val member = member ?: return
+        voiceChannel = member.voiceState?.channel
     }
 
     fun withSender(sender: ICommandSender): CommandSource {
@@ -57,5 +60,20 @@ class CommandSource {
     }
 
     fun clone(): CommandSource = CommandSource(this)
+
+    suspend fun defer() {
+        val sender = sender
+        if (sender is IDeferrableSender) {
+            sender.defer()
+        }
+    }
+
+    suspend fun respond(message: String, option: ICommandSender.RespondOption = ICommandSender.RespondOption()) {
+        sender.respond(message, option)
+    }
+
+    suspend fun respondError(message: String, option: ICommandSender.RespondOption = ICommandSender.RespondOption()) {
+        sender.respondError(message, option)
+    }
 }
 

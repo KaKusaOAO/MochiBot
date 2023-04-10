@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.kakaouo.bot.mochi.command.Command
-import com.kakaouo.bot.mochi.utils.Utils
+import com.kakaouo.bot.mochi.managers.player.PlayerManager
+import com.kakaouo.mochi.utils.Utils
 import java.io.File
 
 object LanguageGenerator : ILanguageGenerator {
@@ -18,6 +19,7 @@ object LanguageGenerator : ILanguageGenerator {
 
     init {
         register(Command)
+        register(PlayerManager)
     }
 
     fun generate() {

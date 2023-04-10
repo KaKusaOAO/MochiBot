@@ -2,18 +2,20 @@ package com.kakaouo.bot.mochi.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kakaouo.bot.mochi.managers.GuildManager
-import com.kakaouo.bot.mochi.utils.Utils
+import com.kakaouo.mochi.config.BaseConfig
+import com.kakaouo.mochi.utils.Utils
 import java.io.File
 
 class GuildConfig(val guildManager: GuildManager) :
     BaseConfig<GuildConfig.Data>(guildManager.rootPath + "config.json", Data::class.java) {
 
-    override val skipLines = 3
+    override fun getSkipLineCount() = 3
 
     class Data: IBaseConfigData {
         override var version = 1
         var isNsfwEnabled = false
         var chatBot = ChatBotConfig()
+        var player = PlayerConfig()
     }
 
     class PlayerConfig {

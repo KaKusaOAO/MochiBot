@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.kakaouo.bot.mochi.config.MochiConfig
 import com.kakaouo.bot.mochi.managers.chat.models.ChatPromptModel
 import com.kakaouo.bot.mochi.managers.chat.models.ChatSessionModel
-import com.kakaouo.bot.mochi.utils.Utils
+import com.kakaouo.mochi.utils.Utils
 import java.io.File
 import java.io.FileNotFoundException
 import java.text.SimpleDateFormat

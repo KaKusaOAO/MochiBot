@@ -12,20 +12,25 @@ import com.kakaouo.bot.mochi.command.sender.DiscordMessageSender
 import com.kakaouo.bot.mochi.command.sender.IDiscordCommandSender
 import com.kakaouo.bot.mochi.i18n.ILanguageGenerator
 import com.kakaouo.bot.mochi.i18n.ILocalizable
-import com.kakaouo.bot.mochi.texts.LiteralText
-import com.kakaouo.bot.mochi.texts.LiteralText.Companion.toText
-import com.kakaouo.bot.mochi.texts.TextColor
 import com.kakaouo.bot.mochi.texts.Texts
-import com.kakaouo.bot.mochi.texts.TranslateText
-import com.kakaouo.bot.mochi.utils.Logger
-import com.kakaouo.bot.mochi.utils.Utils.toCoroutine
+import com.kakaouo.mochi.texts.LiteralText
+import com.kakaouo.mochi.texts.TextColor
+import com.kakaouo.mochi.texts.TextKt.toText
+import com.kakaouo.mochi.texts.TranslateText
+import com.kakaouo.mochi.utils.Logger
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.ParseResults
+import com.mojang.brigadier.arguments.ArgumentType
+import com.mojang.brigadier.builder.ArgumentBuilder
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.builder.RequiredArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.context.CommandContextBuilder
+import kotlinx.coroutines.future.await
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.interactions.DiscordLocale
 import net.dv8tion.jda.api.interactions.commands.CommandInteraction
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
@@ -85,6 +90,9 @@ abstract class Command : ILocalizable {
             ExecuteCommand.registerLocalizations(generator)
             HelpCommand.registerLocalizations(generator)
             ChatCommand.registerLocalizations(generator)
+            IPlayerBaseCommand.registerLocalizations(generator)
+            PlayCommand.registerLocalizations(generator)
+            PauseCommand.registerLocalizations(generator)
         }
 
         fun registerToDispatcher() {
@@ -94,6 +102,8 @@ abstract class Command : ILocalizable {
             ExecuteCommand.register(dispatcher)
             HelpCommand.register(dispatcher)
             ChatCommand.register(dispatcher)
+            PlayCommand.register(dispatcher)
+            PauseCommand.register(dispatcher)
         }
 
         fun registerToDiscord(): List<CommandData> {
@@ -101,7 +111,23 @@ abstract class Command : ILocalizable {
             ExecuteCommand.registerDiscord().apply { list.addAll(this) }
             HelpCommand.registerDiscord().apply { list.addAll(this) }
             ChatCommand.registerDiscord().apply { list.addAll(this) }
+            PlayCommand.registerDiscord().apply { list.addAll(this) }
+            PauseCommand.registerDiscord().apply { list.addAll(this) }
             return list
+        }
+
+        fun makeLocaleMap(key: String): Map<DiscordLocale, String> {
+            val bot = Mochi.instance
+            val map = mutableMapOf<DiscordLocale, String>()
+
+            val locales = arrayOf(
+                DiscordLocale.CHINESE_TAIWAN,
+                DiscordLocale.ENGLISH_US
+            )
+            for (l in locales) {
+                map[l] = bot.getI18nFor(l).of(key)
+            }
+            return map
         }
 
         suspend fun registerCommandsForDiscordGuild(guild: Guild) {
@@ -110,7 +136,7 @@ abstract class Command : ILocalizable {
             })
 
             // Logger.info("Fetching existing guild commands...")
-            val commands = guild.retrieveCommands().submit().toCoroutine()!!
+            val commands = guild.retrieveCommands().submit().await()
 
             try {
                 val removal = commands
@@ -129,7 +155,7 @@ abstract class Command : ILocalizable {
                             )
                         )
                         */
-                        guild.deleteCommandById(r.id).submit().toCoroutine()
+                        guild.deleteCommandById(r.id).submit().await()
                     } catch (ex: Throwable) {
                         Logger.warn(
                             TranslateText.of(
@@ -175,7 +201,7 @@ abstract class Command : ILocalizable {
                  */
 
                 // Edit the command
-                guild.editCommandById(c.id).apply(new).submit().toCoroutine()
+                guild.editCommandById(c.id).apply(new).submit().await()
             }
 
             for (c in newCommands) {
@@ -189,7 +215,7 @@ abstract class Command : ILocalizable {
                     )
                      */
 
-                    guild.upsertCommand(c).submit().toCoroutine()
+                    guild.upsertCommand(c).submit().await()
                 } catch (ex: Throwable) {
                     Logger.warn(
                         TranslateText.of(
@@ -213,8 +239,8 @@ abstract class Command : ILocalizable {
                 !it.isGuildOnly
             })
 
-            // Logger.info("Fetching existing global commands...")
-            val commands = client.retrieveCommands().submit().toCoroutine()!!
+            Logger.info("Fetching existing global commands...")
+            val commands = client.retrieveCommands().submit().await()!!
 
             try {
                 val removal = commands
@@ -225,15 +251,13 @@ abstract class Command : ILocalizable {
 
                 for (r in removal) {
                     try {
-                        /*
                         Logger.info(
                             TranslateText.of(
                                 "Removing non-existing global command %s...",
                                 LiteralText.of("/${r.name}").setColor(TextColor.AQUA)
                             )
                         )
-                         */
-                        client.deleteCommandById(r.id).submit().toCoroutine()
+                        client.deleteCommandById(r.id).submit().await()
                     } catch (ex: Throwable) {
                         Logger.warn(
                             TranslateText.of(
@@ -269,31 +293,27 @@ abstract class Command : ILocalizable {
             for (c in oldCommands) {
                 val new = createdCommands.find { it.name == c.name }!!
 
-                /*
                 Logger.info(
                     TranslateText.of(
                         "Patching existing global command %s...",
                         LiteralText.of("/${c.name}").setColor(TextColor.AQUA)
                     )
                 )
-                 */
 
                 // Edit the command
-                client.editCommandById(c.id).apply(new).submit().toCoroutine()
+                client.editCommandById(c.id).apply(new).submit().await()
             }
 
             for (c in newCommands) {
                 try {
-                    /*
                     Logger.info(
                         TranslateText.of(
                             "Adding new command %s...",
                             LiteralText.of("/${c.name}").setColor(TextColor.AQUA)
                         )
                     )
-                     */
 
-                    client.upsertCommand(c).submit().toCoroutine()
+                    client.upsertCommand(c).submit().await()
                 } catch (ex: Throwable) {
                     Logger.warn(
                         TranslateText.of(
@@ -497,6 +517,16 @@ abstract class Command : ILocalizable {
 
             val usage = dispatcher.getSmartUsage(parent?.node ?: dispatcher.root, context.source)
             return input.substring(0, offset) + usage[node.node]
+        }
+
+        @JvmStatic
+        protected fun literal(name: String): LiteralArgumentBuilder<CommandSource> {
+            return LiteralArgumentBuilder.literal(name)
+        }
+
+        @JvmStatic
+        protected fun <T> argument(name: String, type: ArgumentType<T>): RequiredArgumentBuilder<CommandSource, T> {
+            return RequiredArgumentBuilder.argument(name, type)
         }
     }
 

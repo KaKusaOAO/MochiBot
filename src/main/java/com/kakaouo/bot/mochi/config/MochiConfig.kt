@@ -1,6 +1,6 @@
 package com.kakaouo.bot.mochi.config
 
-import com.knuddels.jtokkit.api.ModelType
+import com.kakaouo.mochi.config.BaseConfig
 import net.dv8tion.jda.api.OnlineStatus
 import net.dv8tion.jda.api.entities.Activity.ActivityType
 

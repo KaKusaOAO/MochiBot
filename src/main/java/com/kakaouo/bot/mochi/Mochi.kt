@@ -1,23 +1,29 @@
 package com.kakaouo.bot.mochi
 
 import com.kakaouo.bot.mochi.command.Command
+import com.kakaouo.bot.mochi.command.ExecuteCommand
 import com.kakaouo.bot.mochi.command.exceptions.MochiBuiltinExceptionProvider
 import com.kakaouo.bot.mochi.command.sender.CommandSource
+import com.kakaouo.bot.mochi.command.sender.ConsoleCommandSender
+import com.kakaouo.bot.mochi.command.sender.DiscordInteractionSender
 import com.kakaouo.bot.mochi.command.sender.IDiscordCommandSender
 import com.kakaouo.bot.mochi.config.MochiConfig
-import com.kakaouo.bot.mochi.i18n.I18n
+import com.kakaouo.bot.mochi.i18n.MochiI18n
 import com.kakaouo.bot.mochi.i18n.ILanguageGenerator
 import com.kakaouo.bot.mochi.i18n.ILocalizable
 import com.kakaouo.bot.mochi.i18n.LanguageGenerator
 import com.kakaouo.bot.mochi.managers.GuildManager
 import com.kakaouo.bot.mochi.managers.chat.ChatBotManager
-import com.kakaouo.bot.mochi.texts.LiteralText
-import com.kakaouo.bot.mochi.texts.TextColor
 import com.kakaouo.bot.mochi.texts.Texts
-import com.kakaouo.bot.mochi.texts.TranslateText
-import com.kakaouo.bot.mochi.utils.Logger
-import com.kakaouo.bot.mochi.utils.Utils
+import com.kakaouo.bot.mochi.utils.MochiEmbedBuilder
+import com.kakaouo.mochi.texts.LiteralText
+import com.kakaouo.mochi.texts.Text
+import com.kakaouo.mochi.texts.TextColor
+import com.kakaouo.mochi.texts.TranslateText
+import com.kakaouo.mochi.utils.Logger
+import com.kakaouo.mochi.utils.UtilsKt
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import kotlinx.coroutines.sync.Semaphore
 import net.dv8tion.jda.api.EmbedBuilder
@@ -37,6 +43,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.EventListener
 import net.dv8tion.jda.api.interactions.DiscordLocale
+import net.dv8tion.jda.api.interactions.commands.Command.Choice
 import net.dv8tion.jda.api.requests.GatewayIntent
 import java.awt.Color
 import java.lang.RuntimeException
@@ -46,7 +53,7 @@ class Mochi : EventListener, ILocalizable {
         private var _inst: Mochi? = null
         val instance get() = _inst!!
 
-        lateinit var i18n: I18n private set
+        lateinit var i18n: MochiI18n private set
     }
 
     object L {
@@ -55,13 +62,13 @@ class Mochi : EventListener, ILocalizable {
 
     lateinit var dispatcher: CommandDispatcher<CommandSource> private set
     val config get() = MochiConfig.instance
-    lateinit var client: JDA
+    var client: JDA
     val user get() = client.selfUser
     val guildManagers = mutableListOf<GuildManager>()
     val chatBotManager: ChatBotManager
 
     private val localeCacheLock = Semaphore(1)
-    val localeCache = mutableMapOf<DiscordLocale, I18n>()
+    val localeCache = mutableMapOf<DiscordLocale, MochiI18n>()
 
     init {
         if (_inst != null) {
@@ -100,8 +107,8 @@ class Mochi : EventListener, ILocalizable {
 
     private fun loadI18n() {
         val locale = config.data.locale
-        val result = I18n(locale)
-        i18n = I18n("$locale-${config.data.commandName}", result)
+        val result = MochiI18n(locale)
+        i18n = MochiI18n("$locale-${config.data.commandName}", result)
 
         Logger.info(TranslateText.of("Loaded global locale: %s")
             .addWith(LiteralText.of(locale).setColor(TextColor.GOLD)))
@@ -117,9 +124,8 @@ class Mochi : EventListener, ILocalizable {
         if (event is MessageReceivedEvent) return onMessageReceived(event)
         if (event is HttpRequestEvent) return // Silence
 
-        val name = event.javaClass.name
         val message = TranslateText.of("Received event: %s")
-            .addWith(LiteralText.of(name).setColor(TextColor.AQUA))
+            .addWith(Text.representClass(event.javaClass, TextColor.AQUA))
 
         if (event is GenericGuildEvent) {
             message.addExtra(TranslateText.of(" at guild %s")
@@ -141,7 +147,7 @@ class Mochi : EventListener, ILocalizable {
         val prefix = config.data.commandPrefix
         if (!cmd.startsWith(prefix)) return
 
-        Utils.asyncDiscard {
+        UtilsKt.asyncDiscard {
             try {
                 Command.executeByCommand(event.message)
             } catch (ex: Throwable) {
@@ -151,7 +157,7 @@ class Mochi : EventListener, ILocalizable {
     }
 
     private fun onMessageContextInteraction(event: MessageContextInteractionEvent) {
-        Utils.asyncDiscard {
+        UtilsKt.asyncDiscard {
             try {
                 Command.executeByCommand(event.interaction)
             } catch (ex: Throwable) {
@@ -161,7 +167,7 @@ class Mochi : EventListener, ILocalizable {
     }
 
     private fun onUserContextInteraction(event: UserContextInteractionEvent) {
-        Utils.asyncDiscard {
+        UtilsKt.asyncDiscard {
             try {
                 Command.executeByCommand(event.interaction)
             } catch (ex: Throwable) {
@@ -171,11 +177,51 @@ class Mochi : EventListener, ILocalizable {
     }
 
     private fun onCommandAutoCompleteInteraction(event: CommandAutoCompleteInteractionEvent) {
+        val options = event.options
+        if (options.isEmpty()) return
 
+        // You're right!
+        // We still don't support other commands!
+        if (event.name != ExecuteCommand.COMMAND_NAME) return
+
+        val arg = event.options.first().asString
+        val line = "${ExecuteCommand.COMMAND_NAME} $arg"
+
+        val interaction = event.interaction
+        val sender = DiscordInteractionSender(interaction)
+        val source = CommandSource(sender)
+        var results = dispatcher.parse(line, source)
+        var suggestions = dispatcher.getCompletionSuggestions(results).get()
+
+        val result = suggestions.list.map {
+            val length = "${ExecuteCommand.COMMAND_NAME} ".length
+            val n = it.apply(line).substring(length)
+            Choice(n, n)
+        }.toMutableList()
+
+        if (result.isEmpty()) {
+            val exceptions = results.exceptions
+            if (exceptions.any()) {
+                val ex = exceptions.values.first()
+                result.add(Choice(ex.message ?: "Error", "_"))
+                interaction.replyChoices(result).submit().get()
+                return
+            }
+        }
+
+        results = dispatcher.parse("$line ", source)
+        suggestions = dispatcher.getCompletionSuggestions(results).get()
+        result.addAll(suggestions.list.map {
+            val length = "${ExecuteCommand.COMMAND_NAME} ".length
+            val n = it.apply("$line ").substring(length)
+            Choice(n, n)
+        })
+
+        interaction.replyChoices(result).submit().get()
     }
 
     private fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
-        Utils.asyncDiscard {
+        UtilsKt.asyncDiscard {
             try {
                 Command.executeByCommand(event.interaction)
             } catch (ex: Throwable) {
@@ -208,26 +254,26 @@ class Mochi : EventListener, ILocalizable {
             .map { GuildManager(it) }
         )
 
-        Utils.asyncDiscard {
+        UtilsKt.asyncDiscard {
             Command.registerCommandsForDiscordGlobal()
         }
 
         guildManagers.forEach {
-            Utils.asyncDiscard {
+            UtilsKt.asyncDiscard {
                 Command.registerCommandsForDiscordGuild(it.guild)
             }
         }
     }
 
-    fun getI18nFor(locale: DiscordLocale): I18n {
-        Utils.promisify {
+    fun getI18nFor(locale: DiscordLocale): MochiI18n {
+        UtilsKt.promisify {
             localeCacheLock.acquire()
         }.get()
 
         try {
             return localeCache.computeIfAbsent(locale) {
-                val result = I18n(locale.name, i18n)
-                I18n(locale.name + "-" + config.data.commandName, result)
+                val result = MochiI18n(locale.name, i18n)
+                MochiI18n(locale.name + "-" + config.data.commandName, result)
             }
         } finally {
             localeCacheLock.release()
@@ -273,13 +319,27 @@ class Mochi : EventListener, ILocalizable {
         return getGuildManager(guild)?.mainColor ?: theme
     }
 
-    fun getBaseEmbed(i18n: I18n, guild: Guild?): EmbedBuilder {
-        return EmbedBuilder()
+    fun getBaseEmbed(i18n: MochiI18n, guild: Guild?): EmbedBuilder {
+        return MochiEmbedBuilder()
             .setColor(getMainColor(guild))
             .setAuthor(i18n.of(L.NICKNAME), null, user.avatarUrl)
     }
 
     fun getBaseEmbed(sender: IDiscordCommandSender): EmbedBuilder {
         return getBaseEmbed(sender.i18n, sender.guild)
+    }
+
+    fun handleCommandLine(line: String?) {
+        if (line == null) return
+
+        val source = CommandSource(ConsoleCommandSender())
+        try {
+            dispatcher.execute(line, source)
+        } catch (ex: CommandSyntaxException) {
+            Logger.error("Syntax error!\n" + ex.message)
+        } catch (ex: Throwable) {
+            Logger.error("Unexpected error occurred!")
+            Logger.error(ex)
+        }
     }
 }

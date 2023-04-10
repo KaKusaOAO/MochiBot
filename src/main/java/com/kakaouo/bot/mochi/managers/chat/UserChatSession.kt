@@ -2,7 +2,7 @@ package com.kakaouo.bot.mochi.managers.chat
 
 import com.aallam.openai.api.BetaOpenAI
 import com.aallam.openai.api.chat.ChatRole
-import com.kakaouo.bot.mochi.utils.Utils
+import com.kakaouo.mochi.utils.Utils
 import net.dv8tion.jda.api.entities.User
 import java.io.File
 

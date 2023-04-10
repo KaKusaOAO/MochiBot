@@ -2,9 +2,7 @@ package com.kakaouo.bot.mochi.managers.chat
 
 import com.aallam.openai.api.BetaOpenAI
 import com.aallam.openai.api.chat.*
-import com.aallam.openai.api.model.Model
 import com.aallam.openai.api.model.ModelId
-import com.aallam.openai.client.Models
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.kakaouo.bot.mochi.Mochi
@@ -13,28 +11,21 @@ import com.kakaouo.bot.mochi.command.sender.DiscordInteractionSender
 import com.kakaouo.bot.mochi.command.sender.DiscordMessageSender
 import com.kakaouo.bot.mochi.command.sender.IDiscordCommandSender
 import com.kakaouo.bot.mochi.config.MochiConfig
-import com.kakaouo.bot.mochi.i18n.I18n
-import com.kakaouo.bot.mochi.texts.LiteralText
-import com.kakaouo.bot.mochi.texts.LiteralText.Companion.toText
-import com.kakaouo.bot.mochi.texts.TextColor
+import com.kakaouo.bot.mochi.i18n.MochiI18n
 import com.kakaouo.bot.mochi.texts.Texts
-import com.kakaouo.bot.mochi.texts.TranslateText
-import com.kakaouo.bot.mochi.utils.Logger
-import com.kakaouo.bot.mochi.utils.Utils
-import com.kakaouo.bot.mochi.utils.Utils.asNullable
-import com.kakaouo.bot.mochi.utils.Utils.toCoroutine
+import com.kakaouo.mochi.texts.LiteralText
+import com.kakaouo.mochi.texts.TextColor
+import com.kakaouo.mochi.texts.TextKt.toText
+import com.kakaouo.mochi.texts.TranslateText
+import com.kakaouo.mochi.utils.Logger
+import com.kakaouo.mochi.utils.UtilsKt
 import com.knuddels.jtokkit.Encodings
-import com.knuddels.jtokkit.api.EncodingRegistry
-import com.knuddels.jtokkit.api.EncodingType
-import com.knuddels.jtokkit.api.ModelType
 import kotlinx.coroutines.delay
 import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.Message.MentionType
 import net.dv8tion.jda.api.events.GenericEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.EventListener
 import java.io.Closeable
-import java.time.Duration
 
 @OptIn(BetaOpenAI::class)
 class ChatBotManager : Closeable, EventListener {
@@ -74,12 +65,14 @@ class ChatBotManager : Closeable, EventListener {
 
     }
 
-    fun handleCheckedMessage(sender: IDiscordCommandSender, message: Message, i18n: I18n) {
+    fun handleCheckedMessage(sender: IDiscordCommandSender, message: Message, i18n: MochiI18n) {
         val api = api ?: return
 
         val user = message.author
-        if (sender.author.id != user.id) {
-            Utils.asyncDiscard {
+        val isSelfMessage = sender.author.id == user.id
+
+        /* {
+            UtilsKt.asyncDiscard {
                 sender.respond(embed = sender.createStyledEmbed {
                     setColor(Constants.ERROR_COLOR)
                     setDescription("只能回覆您自己的訊息！")
@@ -87,6 +80,7 @@ class ChatBotManager : Closeable, EventListener {
             }
             return
         }
+         */
 
         val channel = message.channel
         val guild = if (message.isFromGuild) message.guild else null
@@ -109,7 +103,7 @@ class ChatBotManager : Closeable, EventListener {
         }
 
         fun sendErrorEmbed(error: String) {
-            Utils.asyncDiscard {
+            UtilsKt.asyncDiscard {
                 sender.respond(embed = sender.createStyledEmbed {
                     setDescription(error)
                     setColor(Constants.ERROR_COLOR)
@@ -128,13 +122,14 @@ class ChatBotManager : Closeable, EventListener {
                     .addWith(Texts.ofUser(user))
             )
 
-            Utils.asyncDiscard {
+            UtilsKt.asyncDiscard {
                 sendErrorEmbed("您的訊息太長了。")
             }
             return
         }
 
-        Logger.verbose(TranslateText.of("[Chat] %s: %s")
+        Logger.verbose(
+            TranslateText.of("[Chat] %s: %s")
             .addWith(Texts.ofUser(user))
             .addWith(LiteralText.of(content)))
 
@@ -148,9 +143,9 @@ class ChatBotManager : Closeable, EventListener {
         }.build()
 
         var typing = true
-        Utils.asyncDiscard {
+        UtilsKt.asyncDiscard {
             if (sender is DiscordInteractionSender) {
-                sender.defer()
+                sender.defer(!isSelfMessage)
             } else {
                 while (typing) {
                     channel.sendTyping().queue()
@@ -159,7 +154,7 @@ class ChatBotManager : Closeable, EventListener {
             }
         }
 
-        Utils.asyncDiscard {
+        UtilsKt.asyncDiscard {
             val response: ChatCompletion
             try {
                 response = api.chatCompletion(request)
@@ -172,30 +167,37 @@ class ChatBotManager : Closeable, EventListener {
             }
 
             val text = response.choices.first().message!!.content
-            session.addMessage(ChatRole.User, content, user.id)
-            session.addMessage(ChatRole.Assistant, text)
+            if (isSelfMessage) {
+                session.addMessage(ChatRole.User, content, user.id)
+                session.addMessage(ChatRole.Assistant, text)
+            }
 
             Logger.verbose(TranslateText.of("[Chat] Response to %s: %s")
                 .addWith(Texts.ofUser(user))
                 .addWith(LiteralText.of(text)))
 
-            sender.respond(text, allowedMentions = listOf())
+            sender.respond(text, allowedMentions = listOf(), ephemeral = !isSelfMessage)
+            if (!isSelfMessage) {
+                sender.respond(embed = sender.createStyledEmbed {
+                    setDescription("因為這不是您自己的訊息，本次對話不會儲存。")
+                }.build(), allowedMentions = listOf(), ephemeral = true)
+            } else {
+                val compressThreshold = 1024 * 3
+                val usedTokens = response.usage?.totalTokens ?: 0
+                Logger.verbose(TranslateText.of("Token usage of %s is %s/${compressThreshold}")
+                    .addWith(Texts.ofUser(user))
+                    .addWith(LiteralText.of(usedTokens.toString()).setColor(TextColor.AQUA)))
 
-            val compressThreshold = 1024 * 3
-            val usedTokens = response.usage?.totalTokens ?: 0
-            Logger.verbose(TranslateText.of("Token usage of %s is %s/${compressThreshold}")
-                .addWith(Texts.ofUser(user))
-                .addWith(LiteralText.of(usedTokens.toString()).setColor(TextColor.AQUA)))
+                if (usedTokens >= compressThreshold) {
+                    compressSession(session, i18n)
+                }
 
-            if (usedTokens >= compressThreshold) {
-                compressSession(session, i18n)
+                session.save()
             }
-
-            session.save()
         }
     }
 
-    suspend fun compressSession(session: AbstractChatSession<*>, i18n: I18n) {
+    suspend fun compressSession(session: AbstractChatSession<*>, i18n: MochiI18n) {
         val api = api ?: return
 
         val modelName = MochiConfig.instance.data.chatBot.model

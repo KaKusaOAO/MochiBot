@@ -3,6 +3,7 @@ package com.kakaouo.bot.mochi.command
 import com.kakaouo.bot.mochi.Mochi
 import com.kakaouo.bot.mochi.command.sender.CommandSource
 import com.kakaouo.bot.mochi.command.sender.ConsoleCommandSender
+import com.kakaouo.bot.mochi.command.sender.ICommandSender
 import com.kakaouo.bot.mochi.command.sender.IDiscordCommandSender
 import com.kakaouo.bot.mochi.config.MochiConfig
 import com.kakaouo.bot.mochi.i18n.ILanguageGenerator
@@ -13,51 +14,47 @@ import com.mojang.brigadier.context.CommandContext
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import net.dv8tion.jda.api.interactions.commands.build.Commands
 
-object HelpCommand : Command(), IDiscordCommand {
-    const val COMMAND_NAME = "help"
+object PauseCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
+    const val COMMAND_NAME = "pause"
 
     private object L {
         private const val PREFIX = "command.$COMMAND_NAME"
         const val CMD_DESC = "$PREFIX.description"
-        const val HELP_MESSAGE = "$PREFIX.success"
+        const val SUCCESS_MESSAGE = "$PREFIX.success"
     }
 
     override fun registerLocalizations(generator: ILanguageGenerator) {
         generator
-            .addEntry(L.CMD_DESC, "知道如何和<nickname>溝通就已經踏出第一步了喔！")
-            .addEntry(L.HELP_MESSAGE,
-                Pair("base", "想更認識<nickname>對吧！[快來吧！！](<link>)"),
-                Pair("base-nsfw", "要再[深入<nickname>](<Link>)一點點嗎...！！<3"))
+            .addEntry(L.CMD_DESC, "<nickname>要施展時間暫停術－－砸襪魯抖！！！")
+            .addEntry(L.SUCCESS_MESSAGE, "砸襪魯抖——！！")
     }
 
     override fun register(dispatcher: CommandDispatcher<CommandSource>) {
         dispatcher.register(literal(COMMAND_NAME)
-            .executes(HelpCommand::execute))
+            .executes(PauseCommand::execute))
     }
 
     private fun execute(context: CommandContext<CommandSource>): Int {
         val source = context.source
-        val sender = source.sender
+        UtilsKt.asyncDiscard i@ {
+            if (!canExecute(source)) return@i
 
-        when (sender) {
-            is IDiscordCommandSender -> {
-                UtilsKt.asyncDiscard {
-                    sender.respond(embed = sender.createStyledEmbed {
-                        val config = MochiConfig.instance.data
-                        setDescription(sender.i18n.of(L.HELP_MESSAGE, mapOf(
-                            Pair("link", "${config.repository.url}/blob/master/docs/help.md")
-                        )))
-                    }.build())
-                }
+            val player = source.guildManager?.playerManager
+            if (player == null) {
+                source.respondError(
+                    "You have to be in a guild to do that.", ICommandSender.RespondOption(
+                        preferEmbed = true
+                    )
+                )
+                return@i
             }
 
-            is ConsoleCommandSender -> {
-                val d = Mochi.instance.dispatcher
-                val usages = d.getSmartUsage(d.root, source)
-                for (str in usages.values) {
-                    Logger.info("Usage: /$str")
-                }
-            }
+            player.pause()
+            source.respond(
+                source.i18n.of(L.SUCCESS_MESSAGE), ICommandSender.RespondOption(
+                    preferEmbed = true
+                )
+            )
         }
 
         return 1
@@ -70,4 +67,3 @@ object HelpCommand : Command(), IDiscordCommand {
         )
     }
 }
-
