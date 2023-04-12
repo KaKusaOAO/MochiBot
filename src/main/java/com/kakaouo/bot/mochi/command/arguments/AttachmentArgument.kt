@@ -5,7 +5,7 @@ import com.mojang.brigadier.arguments.ArgumentType
 import net.dv8tion.jda.api.entities.Message.Attachment
 import java.util.NoSuchElementException
 
-class AttachmentArgument : ArgumentType<Attachment> {
+class AttachmentArgument : IArgumentType<Attachment>, ISnowflakeArgument {
     companion object {
         private val map = mutableMapOf<String, Attachment>()
 
@@ -14,19 +14,15 @@ class AttachmentArgument : ArgumentType<Attachment> {
         }
 
         fun serialize(attachment: Attachment): String {
-            return "#attachment:${attachment.id}#"
+            return attachment.id
         }
     }
 
     override fun parse(reader: StringReader): Attachment {
-        for (c in "#attachment:") {
-            reader.expect(c)
-        }
-
-        val str = reader.readStringUntil('#')
+        // reader.expect("#attachment:")
+        val str = reader.readSnowflake()
         val attachment = map[str] ?:
             throw NoSuchElementException("Attachment ID $str is not registered")
-
         map.remove(str)
         return attachment
     }

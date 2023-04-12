@@ -5,12 +5,16 @@ import com.mojang.brigadier.arguments.ArgumentType
 import net.dv8tion.jda.api.entities.IMentionable
 import java.util.NoSuchElementException
 
-class MentionableArgument : ArgumentType<IMentionable>, ISnowflakeArgument {
+class MentionableArgument : IArgumentType<IMentionable>, ISnowflakeArgument {
     companion object {
         private val map = mutableMapOf<String, IMentionable>()
 
         fun register(mentionable: IMentionable) {
             map[mentionable.id] = mentionable
+        }
+
+        fun serialize(mentionable: IMentionable): String {
+            return mentionable.id
         }
     }
 

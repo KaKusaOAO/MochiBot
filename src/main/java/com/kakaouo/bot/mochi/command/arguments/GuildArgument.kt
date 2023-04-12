@@ -5,7 +5,7 @@ import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.arguments.ArgumentType
 import net.dv8tion.jda.api.entities.Guild
 
-class GuildArgument : ArgumentType<Guild>, ISnowflakeArgument {
+class GuildArgument : IArgumentType<Guild>, ISnowflakeArgument {
     override fun parse(reader: StringReader): Guild {
         val snowflake = reader.readSnowflake()
         return Mochi.instance.client.getGuildById(snowflake) ?:

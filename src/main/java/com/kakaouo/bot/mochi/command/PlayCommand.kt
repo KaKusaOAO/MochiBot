@@ -1,6 +1,7 @@
 package com.kakaouo.bot.mochi.command
 
 import com.kakaouo.bot.mochi.Mochi
+import com.kakaouo.bot.mochi.command.arguments.AttachmentArgument
 import com.kakaouo.bot.mochi.command.sender.CommandSource
 import com.kakaouo.bot.mochi.command.sender.ICommandSender
 import com.kakaouo.bot.mochi.i18n.ILanguageGenerator
@@ -54,6 +55,14 @@ object PlayCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
             .then(literal(QUERY_LITERAL_NAME)
                 .then(argument(QUERY_ARG_NAME, StringArgumentType.greedyString())
                     .executes(PlayCommand::executeQuery)
+                )
+            )
+            .then(literal(FILE_LITERAL_NAME)
+                .then(argument(FILE_ARG_NAME, AttachmentArgument())
+                    .executes {
+                        Logger.error("Not implemented for /play file ...")
+                        return@executes 1
+                    }
                 )
             )
         )

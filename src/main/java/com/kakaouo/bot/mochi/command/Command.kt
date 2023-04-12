@@ -1,9 +1,7 @@
 package com.kakaouo.bot.mochi.command
 
 import com.kakaouo.bot.mochi.Mochi
-import com.kakaouo.bot.mochi.command.arguments.AttachmentArgument
-import com.kakaouo.bot.mochi.command.arguments.MentionableArgument
-import com.kakaouo.bot.mochi.command.arguments.MessageArgument
+import com.kakaouo.bot.mochi.command.arguments.*
 import com.kakaouo.bot.mochi.command.exceptions.CommandMisuseException
 import com.kakaouo.bot.mochi.command.exceptions.DispatcherParseFailureMessage
 import com.kakaouo.bot.mochi.command.sender.CommandSource
@@ -349,47 +347,55 @@ abstract class Command : ILocalizable {
                 input += "$subcmd "
             }
 
+            val args = mutableListOf<String>()
             for (opt in options) {
                 // Handle every argument and register them if needed
                 when (opt.type) {
-                    OptionType.SUB_COMMAND -> continue
-                    OptionType.SUB_COMMAND_GROUP -> continue
-                    OptionType.UNKNOWN -> continue
+                    OptionType.SUB_COMMAND -> {
+                        continue
+                    }
+                    OptionType.SUB_COMMAND_GROUP -> {
+                        continue
+                    }
+                    OptionType.UNKNOWN -> {
+                        continue
+                    }
 
                     OptionType.STRING -> {
-                        input += "${opt.asString} "
+                        args.add(opt.asString)
                     }
                     OptionType.INTEGER -> {
-                        input += "${opt.asLong} "
+                        args.add("${opt.asLong}")
                     }
                     OptionType.BOOLEAN -> {
-                        input += "${opt.asBoolean} "
+                        args.add("${opt.asBoolean}")
                     }
                     OptionType.ATTACHMENT -> {
                         val attachment = opt.asAttachment
                         AttachmentArgument.register(attachment)
-                        input += AttachmentArgument.serialize(attachment)
+                        args.add(AttachmentArgument.serialize(attachment))
                     }
                     OptionType.USER -> {
-                        input += "${opt.asUser.id} "
+                        args.add(UserArgument.serialize(opt.asUser))
                     }
                     OptionType.CHANNEL -> {
-                        input += "${opt.asChannel.id} "
+                        args.add(ChannelArgument.serialize(opt.asChannel))
                     }
                     OptionType.ROLE -> {
-                        input += "${opt.asRole.id} "
+                        args.add(RoleArgument.serialize(opt.asRole))
                     }
                     OptionType.MENTIONABLE -> {
                         val mentionable = opt.asMentionable
                         MentionableArgument.register(mentionable)
-                        input += "${mentionable.id} "
+                        args.add(MentionableArgument.serialize(mentionable))
                     }
                     OptionType.NUMBER -> {
-                        input += "${opt.asDouble} "
+                        args.add("${opt.asDouble}")
                     }
                 }
             }
 
+            input += args.joinToString(" ")
             return input.trim()
         }
 

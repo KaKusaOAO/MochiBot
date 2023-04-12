@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.interactions.DiscordLocale
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import net.dv8tion.jda.api.interactions.commands.build.Commands
 
+// 這是一個右鍵選單的指令，我們的內部實作是把它當作文字指令
 object ChatCommand : Command(), IDiscordCommand {
     const val COMMAND_NAME = "chat"
     const val ARG_MESSAGE_NAME = "message"
@@ -29,6 +30,7 @@ object ChatCommand : Command(), IDiscordCommand {
     }
 
     override fun register(dispatcher: CommandDispatcher<CommandSource>) {
+        // 訊息的右鍵選單指令需要接收一個訊息的參數
         dispatcher.register(literal(COMMAND_NAME)
             .then(argument(ARG_MESSAGE_NAME, MessageArgument())
                 .executes(ChatCommand::execute)
@@ -41,6 +43,7 @@ object ChatCommand : Command(), IDiscordCommand {
         val sender = source.sender
         val message = context.getArgument<Message>("message")
 
+        // 只有 Discord 用戶可以使用這個功能，因為目前只有 interaction 那裡有辦法將參數傳到這裡
         if (sender !is IDiscordCommandSender) {
             UtilsKt.asyncDiscard {
                 source.respondError("Only Discord users can use the chat feature.")
@@ -54,20 +57,9 @@ object ChatCommand : Command(), IDiscordCommand {
     }
 
     override fun registerDiscord(): List<CommandData> {
-        val bot = Mochi.instance
-        val map = mutableMapOf<DiscordLocale, String>()
-
-        val locales = arrayOf(
-            DiscordLocale.CHINESE_TAIWAN,
-            DiscordLocale.ENGLISH_US
-        )
-        for (l in locales) {
-            map[l] = bot.getI18nFor(l).of(L.CMD_NAME).trim()
-        }
-
         return listOf(
             Commands.message(COMMAND_NAME)
-                .setNameLocalizations(map)
+                .setNameLocalizations(makeLocaleMap(L.CMD_NAME))
         )
     }
 }
