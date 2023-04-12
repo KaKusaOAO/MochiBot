@@ -7,7 +7,7 @@ interface ICommandSender {
     val name: String
     val i18n: MochiI18n
 
-    fun getMentionString() = name
+    fun getAsMention() = name
 
     data class RespondOption(
         val preferEmbed: Boolean = false,

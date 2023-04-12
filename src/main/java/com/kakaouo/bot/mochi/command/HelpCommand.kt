@@ -27,7 +27,7 @@ object HelpCommand : Command(), IDiscordCommand {
             .addEntry(L.CMD_DESC, "知道如何和<nickname>溝通就已經踏出第一步了喔！")
             .addEntry(L.HELP_MESSAGE,
                 Pair("base", "想更認識<nickname>對吧！[快來吧！！](<link>)"),
-                Pair("base-nsfw", "要再[深入<nickname>](<Link>)一點點嗎...！！<3"))
+                Pair("base-nsfw", "要再[深入<nickname>](<link>)一點點嗎...！！<3"))
     }
 
     override fun register(dispatcher: CommandDispatcher<CommandSource>) {
@@ -42,6 +42,7 @@ object HelpCommand : Command(), IDiscordCommand {
         when (sender) {
             is IDiscordCommandSender -> {
                 UtilsKt.asyncDiscard {
+                    // 帶使用者到 GitHub 說明頁面
                     sender.respond(embed = sender.createStyledEmbed {
                         val config = MochiConfig.instance.data
                         setDescription(sender.i18n.of(L.HELP_MESSAGE, mapOf(
@@ -52,6 +53,7 @@ object HelpCommand : Command(), IDiscordCommand {
             }
 
             is ConsoleCommandSender -> {
+                // 直接輸出所有指令的用法
                 val d = Mochi.instance.dispatcher
                 val usages = d.getSmartUsage(d.root, source)
                 for (str in usages.values) {

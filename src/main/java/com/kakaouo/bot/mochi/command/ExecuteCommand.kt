@@ -45,6 +45,7 @@ object ExecuteCommand : Command(), IDiscordCommand {
     }
 
     override fun register(dispatcher: CommandDispatcher<CommandSource>) {
+        // 先定義好 /execute 的根部，所以等等後續的指令才能重新導向到這裡
         val root = dispatcher.register(literal(COMMAND_NAME)
             .requires {
                 if (it.sender is ConsoleCommandSender) return@requires true
@@ -53,7 +54,10 @@ object ExecuteCommand : Command(), IDiscordCommand {
                 sender is IDiscordCommandSender && sender.author.id == "217238973246865408"
             })
 
+        // 以下指令樹超複雜！
         dispatcher.register(literal(COMMAND_NAME)
+            // -> /execute run ...
+            //: 這個指令會重新導向到整個指令樹的最根部，同時驗證 source 數值是否正常 (ex. 頻道的伺服器和已綁定的伺服器是否一致)
             .then(literal("run")
                 .redirect(dispatcher.root) {
                     val source = it.source
@@ -63,11 +67,19 @@ object ExecuteCommand : Command(), IDiscordCommand {
                     return@redirect source
                 }
             )
+            // -> /execute as ...
+            //: 將 source 綁定到一個新的使用者
             .then(addUserNode(root, literal("as")) { s, user ->
                 s.user = user
             })
+            // -> /execute in ...
+            //: 將 source 綁定到某個文字、語音頻道，或是一個伺服器
             .then(literal("in")
+                // -> /execute in channel ...
+                //: 將 source 綁定到某個文字、語音頻道，並同時綁定到該頻道的伺服器
                 .then(literal("channel")
+                    // -> /execute in channel text <channelId> ...
+                    //: 將 source 綁定到某個文字頻道，並同時綁定到該頻道的伺服器
                     .then(literal("text")
                         .then(argument("channelId", ChannelArgument())
                             .fork(root) {
@@ -81,6 +93,8 @@ object ExecuteCommand : Command(), IDiscordCommand {
                             }
                         )
                     )
+                    // -> /execute in channel voice <channelId> ...
+                    //: 將 source 綁定到某個語音頻道，並同時綁定到該頻道的伺服器
                     .then(literal("voice")
                         .then(argument("channelId", ChannelArgument())
                             .fork(root) {
@@ -95,6 +109,8 @@ object ExecuteCommand : Command(), IDiscordCommand {
                         )
                     )
                 )
+                // -> /execute in guild <guildId>
+                //: 將 source 綁定到某個伺服器
                 .then(literal("guild")
                     .then(argument("guildId", GuildArgument())
                         .fork(root) {
@@ -107,9 +123,12 @@ object ExecuteCommand : Command(), IDiscordCommand {
                     )
                 )
             )
-            .then(addUserNode(root, literal("at")) { s, user ->
+            // -> /execute at ...
+            //: 綁定某個使用者在「已綁定的伺服器中」目前正在使用的「語音頻道」
+            .then(addUserNode(root, literal("at")) { s, _ ->
                 validateGuildUser(s)
-                s.voiceChannel = s.member?.voiceState?.channel
+                val member = s.member ?: return@addUserNode
+                s.voiceChannel = member.voiceState?.channel
             })
         )
     }

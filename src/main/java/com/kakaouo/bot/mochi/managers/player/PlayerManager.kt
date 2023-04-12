@@ -16,14 +16,11 @@ import com.kakaouo.mochi.utils.Logger
 import com.kakaouo.mochi.utils.UtilsKt
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEvent
-import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventListener
 import com.sedmelluq.discord.lavaplayer.player.event.TrackEndEvent
 import com.sedmelluq.discord.lavaplayer.player.event.TrackExceptionEvent
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers
-import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.audio.AudioSendHandler
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
@@ -32,7 +29,6 @@ import net.dv8tion.jda.api.events.GenericEvent
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent
 import net.dv8tion.jda.api.hooks.EventListener
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
-import java.nio.ByteBuffer
 import java.util.concurrent.Semaphore
 
 class PlayerManager(val guildManager: GuildManager) : EventListener, AudioEventListener {
@@ -144,7 +140,7 @@ class PlayerManager(val guildManager: GuildManager) : EventListener, AudioEventL
                 val time = n.getTimeForDisplay()
 
                 val user = n.source.user
-                val tag = if (user == null) n.source.sender.getMentionString() else "<@${user.id}>"
+                val tag = if (user == null) n.source.sender.getAsMention() else "<@${user.id}>"
                 setDescription("$title [$tag] $time".trim())
                 setAuthor(i18n.of(L.CURRENT_PLAYING_TITLE))
             }.build())

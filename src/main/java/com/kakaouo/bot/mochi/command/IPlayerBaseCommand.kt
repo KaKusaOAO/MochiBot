@@ -38,17 +38,14 @@ interface IPlayerBaseCommand {
         source: CommandSource, requiresBotInChannel: Boolean, requiresSameChannel: Boolean,
         suppressRespond: Boolean, callback: ExecuteDelegate? = null) {
         val guildManager = source.guildManager
-        if (guildManager == null) {
-            source.respondError("You have to be in a guild!", ICommandSender.RespondOption(
-                preferEmbed = true
-            ))
-            return
-        }
-
+        val guild = guildManager?.guild
         val channel = source.voiceChannel
-        val guild = guildManager.guild
 
-        if (channel == null) {
+        if (channel == null || guild == null) {
+            // 如果 source 沒有綁定到一個伺服器，我們已經可以 100% 斷定該使用者不在一個語音頻道中
+            // 因為 bot 是不支援私訊語音通話的
+
+            // 反之，如果有設定語音頻道，伺服器絕對不會是空值
             if (!suppressRespond) {
                 source.respondError(source.i18n.of(L.ERR_USER_NOT_IN_CHANNEL), ICommandSender.RespondOption(
                     preferEmbed = true

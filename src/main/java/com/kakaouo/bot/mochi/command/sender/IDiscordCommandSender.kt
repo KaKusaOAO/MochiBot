@@ -23,7 +23,7 @@ interface IDiscordCommandSender : ICommandSender {
 
     override val name get() = author.name + "#" + author.discriminator
 
-    override fun getMentionString(): String {
+    override fun getAsMention(): String {
         return "<@${author.id}>"
     }
 
