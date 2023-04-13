@@ -6,9 +6,11 @@ import com.kakaouo.mochi.config.BaseConfig
 import com.kakaouo.mochi.utils.Utils
 import java.io.File
 
-class GuildConfig(val guildManager: GuildManager) :
+class GuildConfig (val guildManager: GuildManager) :
     BaseConfig<GuildConfig.Data>(guildManager.rootPath + "config.json", Data::class.java) {
 
+    // The JSON parser we are using doesn't support comments in payload.
+    // We need to skip these comment lines!
     override fun getSkipLineCount() = 3
 
     class Data: IBaseConfigData {
@@ -47,8 +49,12 @@ class GuildConfig(val guildManager: GuildManager) :
 
     override fun save() {
         val writer = file.writer()
+
+        // Always write the guild basic info as comments
         writer.write("// Guild: ${guildManager.guild.name}\n")
         writer.write("// ID: #${guildManager.guild.id}\n\n")
+
+        // Write the JSON payload
         ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(writer, data)
         writer.close()
     }

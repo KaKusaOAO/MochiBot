@@ -4,6 +4,7 @@ import com.kakaouo.mochi.texts.LiteralText
 import com.kakaouo.mochi.texts.Text
 import com.kakaouo.mochi.texts.TextColor
 import com.kakaouo.mochi.texts.TextKt.toText
+import com.kakaouo.mochi.texts.TranslateText
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.ISnowflake
 import net.dv8tion.jda.api.entities.User
@@ -26,5 +27,17 @@ object Texts {
 
     fun ofUser(user: User?): Text<*> {
         return ofSnowflakeEntity(user, TextColor.YELLOW) { it.name }
+    }
+
+    fun literal(content: String, block: TextBuilder.LiteralDsl.() -> Unit = {}): LiteralText {
+        return TextBuilder {
+            literal(content, block)
+        } as LiteralText
+    }
+
+    fun translate(format: String, block: TextBuilder.TranslatableDsl.() -> Unit = {}): TranslateText {
+        return TextBuilder {
+            translate(format, block)
+        } as TranslateText
     }
 }

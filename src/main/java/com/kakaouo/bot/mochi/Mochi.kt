@@ -14,6 +14,7 @@ import com.kakaouo.bot.mochi.i18n.ILocalizable
 import com.kakaouo.bot.mochi.i18n.LanguageGenerator
 import com.kakaouo.bot.mochi.managers.GuildManager
 import com.kakaouo.bot.mochi.managers.chat.ChatBotManager
+import com.kakaouo.bot.mochi.texts.TextBuilder
 import com.kakaouo.bot.mochi.texts.Texts
 import com.kakaouo.bot.mochi.utils.MochiEmbedBuilder
 import com.kakaouo.mochi.texts.LiteralText
@@ -23,7 +24,6 @@ import com.kakaouo.mochi.texts.TranslateText
 import com.kakaouo.mochi.utils.Logger
 import com.kakaouo.mochi.utils.UtilsKt
 import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import kotlinx.coroutines.sync.Semaphore
 import net.dv8tion.jda.api.EmbedBuilder
@@ -110,8 +110,11 @@ class Mochi : EventListener, ILocalizable {
         val result = MochiI18n(locale)
         i18n = MochiI18n("$locale-${config.data.commandName}", result)
 
-        Logger.info(TranslateText.of("Loaded global locale: %s")
-            .addWith(LiteralText.of(locale).setColor(TextColor.GOLD)))
+        Logger.info(Texts.translate("Loaded global locale: %s") {
+            with(Texts.literal(locale) {
+                color(TextColor.GOLD)
+            })
+        })
     }
 
     override fun onEvent(event: GenericEvent) {
@@ -124,12 +127,11 @@ class Mochi : EventListener, ILocalizable {
         if (event is MessageReceivedEvent) return onMessageReceived(event)
         if (event is HttpRequestEvent) return // Silence
 
-        val message = TranslateText.of("Received event: %s")
-            .addWith(Text.representClass(event.javaClass, TextColor.AQUA))
-
-        if (event is GenericGuildEvent) {
-            message.addExtra(TranslateText.of(" at guild %s")
-                .addWith(Texts.ofGuild(event.guild)))
+        val message = Texts.translate("Received event: %s") {
+            with(Text.representClass(event.javaClass, TextColor.AQUA))
+            if (event is GenericGuildEvent) {
+                extra(Texts.ofGuild(event.guild))
+            }
         }
 
         Logger.info(message)
@@ -237,11 +239,12 @@ class Mochi : EventListener, ILocalizable {
     }
 
     private fun onReady(event: ReadyEvent) {
-        Logger.info(TranslateText.of("Discord bot logged in as %s %s")
-            .addWith(Texts.ofUser(user))
-            .addWith(LiteralText.of("(shard #${client.shardInfo.shardId})")
-                .setColor(TextColor.DARK_GRAY))
-        )
+        Logger.info(Texts.translate("Discord bot logged in as %s %s") {
+            with(Texts.ofUser(user))
+            with(Texts.literal("(shard #${client.shardInfo.shardId})") {
+                color(TextColor.DARK_GRAY)
+            })
+        })
 
         val guilds = client.guilds
         guildManagers.removeIf { manager ->
@@ -272,8 +275,7 @@ class Mochi : EventListener, ILocalizable {
 
         try {
             return localeCache.computeIfAbsent(locale) {
-                val result = MochiI18n(locale.name, i18n)
-                MochiI18n(locale.name + "-" + config.data.commandName, result)
+                MochiI18n(locale.name, i18n).wrapBotVariant()
             }
         } finally {
             localeCacheLock.release()

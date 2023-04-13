@@ -85,6 +85,7 @@ abstract class Command : ILocalizable {
                 )
 
 
+            // Every localizable commands should also be registered here
             ExecuteCommand.registerLocalizations(generator)
             HelpCommand.registerLocalizations(generator)
             ChatCommand.registerLocalizations(generator)

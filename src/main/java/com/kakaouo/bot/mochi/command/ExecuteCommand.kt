@@ -109,7 +109,7 @@ object ExecuteCommand : Command(), IDiscordCommand {
                         )
                     )
                 )
-                // -> /execute in guild <guildId>
+                // -> /execute in guild <guildId> ...
                 //: 將 source 綁定到某個伺服器
                 .then(literal("guild")
                     .then(argument("guildId", GuildArgument())
@@ -153,6 +153,7 @@ object ExecuteCommand : Command(), IDiscordCommand {
 
     private fun <T : ArgumentBuilder<CommandSource, T>> addUserNode(root: CommandNode<CommandSource>, node: T, block: (CommandSource, User?) -> Unit): T {
         return node
+            // -> ... selfuser ...
             .then(literal("selfuser")
                 .fork(root) {
                     val source = it.source
@@ -162,6 +163,7 @@ object ExecuteCommand : Command(), IDiscordCommand {
                     })
                 }
             )
+            // -> ... user <memberId> ...
             .then(literal("user")
                 .then(argument("memberId", UserArgument())
                     .fork(root) {
@@ -173,6 +175,7 @@ object ExecuteCommand : Command(), IDiscordCommand {
                     }
                 )
             )
+            // -> ... @me ...
             .then(literal("@me")
                 .fork(root) {
                     val source = it.source

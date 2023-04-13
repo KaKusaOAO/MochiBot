@@ -127,23 +127,29 @@ class PlayerManager(val guildManager: GuildManager) : EventListener, AudioEventL
         return getQueue(getNextIndex())
     }
 
-    private fun play(n: AbstractQueueItem, interrupt: Boolean): Boolean {
-        val started = player.startTrack(n.audioTrack, !interrupt)
+    /**
+     * Optionally interrupt the currently playing music, and play the specified queue.
+     * @param queue The target queue.
+     * @param interrupt Whether to interrupt the currently playing music.
+     * @return `true` if the specified queue is started playing, or `false` if not.
+     */
+    private fun play(queue: AbstractQueueItem, interrupt: Boolean): Boolean {
+        val started = player.startTrack(queue.audioTrack, !interrupt)
         if (!started) return false
 
-        val i18n = n.source.i18n
+        val i18n = queue.source.i18n
         val isSilent = guildManager.config.data.player.isSilentMode
 
         if (!isSilent) {
-            sendToAnnounceChannel(createStyledEmbed(false) {
-                val title = n.getTitleForDisplay()
-                val time = n.getTimeForDisplay()
+            sendToAnnounceChannel(removeAuthor = false) {
+                val title = queue.getTitleForDisplay()
+                val time = queue.getTimeForDisplay()
 
-                val user = n.source.user
-                val tag = if (user == null) n.source.sender.getAsMention() else "<@${user.id}>"
+                val user = queue.source.user
+                val tag = if (user == null) queue.source.sender.getAsMention() else "<@${user.id}>"
                 setDescription("$title [$tag] $time".trim())
                 setAuthor(i18n.of(L.CURRENT_PLAYING_TITLE))
-            }.build())
+            }
         }
 
         return true
@@ -159,6 +165,14 @@ class PlayerManager(val guildManager: GuildManager) : EventListener, AudioEventL
             lastPlayingMessage = it
             guildManager.config.data.player.lastPlayingMessageId = it.id
         }.get()
+    }
+
+    fun sendTemporaryToAnnounceChannel(removeAuthor: Boolean = true, block: EmbedBuilder.() -> Unit) {
+        sendToAnnounceChannel(removeAuthor, saveAsLastMessage = false, block)
+    }
+
+    fun sendToAnnounceChannel(removeAuthor: Boolean = true, saveAsLastMessage: Boolean = true, block: EmbedBuilder.() -> Unit) {
+        sendToAnnounceChannel(createStyledEmbed(removeAuthor, block).build(), saveAsLastMessage)
     }
 
     fun createStyledEmbed(removeAuthor: Boolean = true, block: EmbedBuilder.() -> Unit): EmbedBuilder {
@@ -267,10 +281,10 @@ class PlayerManager(val guildManager: GuildManager) : EventListener, AudioEventL
         )
         Logger.error(event.exception)
 
-        sendToAnnounceChannel(createStyledEmbed {
+        sendTemporaryToAnnounceChannel {
             setColor(Constants.ERROR_COLOR)
             setDescription("播放該歌曲時發生錯誤！")
-        }.build(), false)
+        }
     }
 
     private fun onTrackEnd(event: TrackEndEvent) {

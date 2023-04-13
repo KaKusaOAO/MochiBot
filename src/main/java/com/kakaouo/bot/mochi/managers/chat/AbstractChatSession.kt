@@ -90,8 +90,7 @@ abstract class AbstractChatSession<T>(val host: T) {
         result.add(0, ChatMessage(
             ChatRole.System,
             systemPromptBuilder.toString()
-        )
-        )
+        ))
         return result;
     }
 
