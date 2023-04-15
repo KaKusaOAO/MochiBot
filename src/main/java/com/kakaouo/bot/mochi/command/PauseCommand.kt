@@ -2,12 +2,8 @@ package com.kakaouo.bot.mochi.command
 
 import com.kakaouo.bot.mochi.Mochi
 import com.kakaouo.bot.mochi.command.sender.CommandSource
-import com.kakaouo.bot.mochi.command.sender.ConsoleCommandSender
 import com.kakaouo.bot.mochi.command.sender.ICommandSender
-import com.kakaouo.bot.mochi.command.sender.IDiscordCommandSender
-import com.kakaouo.bot.mochi.config.MochiConfig
 import com.kakaouo.bot.mochi.i18n.ILanguageGenerator
-import com.kakaouo.mochi.utils.Logger
 import com.kakaouo.mochi.utils.UtilsKt
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.context.CommandContext
@@ -67,3 +63,4 @@ object PauseCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
         )
     }
 }
+

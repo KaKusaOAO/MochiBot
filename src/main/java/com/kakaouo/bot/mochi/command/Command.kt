@@ -92,6 +92,7 @@ abstract class Command : ILocalizable {
             IPlayerBaseCommand.registerLocalizations(generator)
             PlayCommand.registerLocalizations(generator)
             PauseCommand.registerLocalizations(generator)
+            TestCommand.registerLocalizations(generator)
         }
 
         fun registerToDispatcher() {
@@ -103,6 +104,9 @@ abstract class Command : ILocalizable {
             ChatCommand.register(dispatcher)
             PlayCommand.register(dispatcher)
             PauseCommand.register(dispatcher)
+            if (TestCommand.ENABLED) {
+                TestCommand.register(dispatcher)
+            }
         }
 
         fun registerToDiscord(): List<CommandData> {
@@ -112,6 +116,9 @@ abstract class Command : ILocalizable {
             ChatCommand.registerDiscord().apply { list.addAll(this) }
             PlayCommand.registerDiscord().apply { list.addAll(this) }
             PauseCommand.registerDiscord().apply { list.addAll(this) }
+            if (TestCommand.ENABLED) {
+                TestCommand.registerDiscord().apply { list.addAll(this) }
+            }
             return list
         }
 

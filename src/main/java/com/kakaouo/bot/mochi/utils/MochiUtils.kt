@@ -4,6 +4,8 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.utils.messages.AbstractMessageBuilder
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import java.lang.IllegalArgumentException
 import java.time.Duration
 import java.time.temporal.ChronoUnit
@@ -13,6 +15,17 @@ object MochiUtils {
     fun User?.asMember(guild: Guild?): Member? {
         if (this == null) return null
         return guild?.getMember(this)
+    }
+
+    fun <T: AbstractMessageBuilder<*, *>> T.setVoiceMessageFlag(): T {
+        val field = AbstractMessageBuilder::class.java.getDeclaredField("messageFlags")
+        field.isAccessible = true
+
+        val oldFlag = field.get(this) as Int
+        val flag = oldFlag or 8192
+        field.set(this, flag)
+
+        return this
     }
 
     fun <T> Semaphore.runAcquired(block: () -> T): T {
