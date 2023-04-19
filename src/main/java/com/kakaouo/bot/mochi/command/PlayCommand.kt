@@ -6,6 +6,9 @@ import com.kakaouo.bot.mochi.command.sender.CommandSource
 import com.kakaouo.bot.mochi.command.sender.ICommandSender
 import com.kakaouo.bot.mochi.i18n.ILanguageGenerator
 import com.kakaouo.bot.mochi.i18n.UserPlaceholder
+import com.kakaouo.bot.mochi.managers.player.PlayerManager
+import com.kakaouo.bot.mochi.managers.player.queue.AbstractQueueItem
+import com.kakaouo.bot.mochi.managers.player.queue.ILengthAvailableQueue
 import com.kakaouo.bot.mochi.utils.MochiUtils.format
 import com.kakaouo.mochi.utils.Logger
 import com.kakaouo.mochi.utils.UtilsKt
@@ -13,6 +16,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.sedmelluq.discord.lavaplayer.tools.Units
+import net.dv8tion.jda.api.entities.Message.Attachment
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import net.dv8tion.jda.api.interactions.commands.build.Commands
@@ -59,10 +63,7 @@ object PlayCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
             )
             .then(literal(FILE_LITERAL_NAME)
                 .then(argument(FILE_ARG_NAME, AttachmentArgument())
-                    .executes {
-                        Logger.error("Not implemented for /play file ...")
-                        return@executes 1
-                    }
+                    .executes(PlayCommand::executeFile)
                 )
             )
         )
@@ -89,7 +90,7 @@ object PlayCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
         )
     }
 
-    private fun executeQuery(ctx: CommandContext<CommandSource>): Int {
+    private fun execute(ctx: CommandContext<CommandSource>, block: suspend PlayerManager.() -> List<AbstractQueueItem>): Int {
         UtilsKt.asyncDiscard i@ {
             val source = ctx.source
             if (!canExecute(source, requiresBotInChannel = false)) return@i
@@ -97,7 +98,6 @@ object PlayCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
             val member = source.member ?: return@i
             val manager = source.guildManager!!
             val i18n = source.i18n
-            val query = ctx.getArgument<String>("query")
             val channel = source.voiceChannel!!
             val textChannel = source.channel
             val playerManager = manager.playerManager
@@ -110,7 +110,7 @@ object PlayCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
             }
 
             try {
-                val list = playerManager.addLavaPlayerSourceToQueueAsync(query, source)
+                val list = playerManager.block();
                 var desc: String
 
                 if (list.isEmpty()) {
@@ -125,27 +125,32 @@ object PlayCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
                         Pair("user", UserPlaceholder(member.user))
                     ))
 
-                    if (list.all { it.length != Units.DURATION_MS_UNKNOWN }) {
-                        val totalDuration = list
-                            .filter { it.length != Units.DURATION_MS_UNKNOWN }
-                            .map { it.length }
-                            .reduce { a, b -> a + b }
-                        val d = Duration.of(totalDuration, ChronoUnit.MILLIS)
-                        val time = "`[${d.format()}]`"
-                        desc = desc.plus(" $time").trim()
+                    if (list.all { it is ILengthAvailableQueue }) {
+                        val typed = list.map { it as ILengthAvailableQueue }
+                        if (typed.all { it.length != Units.DURATION_MS_UNKNOWN }) {
+                            val totalDuration = typed
+                                .filter { it.length != Units.DURATION_MS_UNKNOWN }
+                                .map { it.length }
+                                .reduce { a, b -> a + b }
+                            val d = Duration.of(totalDuration, ChronoUnit.MILLIS)
+                            val time = "`[${d.format()}]`"
+                            desc = desc.plus(" $time").trim()
+                        }
                     }
                 } else {
                     val queue = list.first()
                     desc = i18n.of(L.SUCCESS_QUEUED_SINGLE, mutableMapOf<String, Any>(
-                        Pair("songTitle", "[${queue.title}](${queue.link})"),
+                        Pair("songTitle", queue.getTitleForDisplay()),
                         Pair("user", UserPlaceholder(member.user))
                     ))
 
-                    val duration = queue.length
-                    if (duration != Units.DURATION_MS_UNKNOWN) {
-                        val d = Duration.of(duration, ChronoUnit.MILLIS)
-                        val time = "`[${d.format()}]`"
-                        desc = desc.plus(" $time").trim()
+                    if (queue is ILengthAvailableQueue) {
+                        val duration = queue.length
+                        if (duration != Units.DURATION_MS_UNKNOWN) {
+                            val d = Duration.of(duration, ChronoUnit.MILLIS)
+                            val time = "`[${d.format()}]`"
+                            desc = desc.plus(" $time").trim()
+                        }
                     }
                 }
 
@@ -159,5 +164,21 @@ object PlayCommand : Command(), IDiscordCommand, IPlayerBaseCommand {
         }
 
         return 1
+    }
+
+    private fun executeQuery(ctx: CommandContext<CommandSource>): Int {
+        return execute(ctx) {
+            val source = ctx.source
+            val query = ctx.getArgument<String>(QUERY_ARG_NAME)
+            addLavaPlayerSourceToQueueAsync(query, source)
+        }
+    }
+
+    private fun executeFile(ctx: CommandContext<CommandSource>): Int {
+        return execute(ctx) {
+            val source = ctx.source
+            val file = ctx.getArgument<Attachment>(FILE_ARG_NAME)
+            addLavaPlayerSourceToQueueAsync(file.url, source, file.fileName)
+        }
     }
 }

@@ -130,6 +130,9 @@ class Mochi : EventListener, ILocalizable {
         val message = Texts.translate("Received event: %s") {
             with(Text.representClass(event.javaClass, TextColor.AQUA))
             if (event is GenericGuildEvent) {
+                extra {
+                    literal(" in ")
+                }
                 extra(Texts.ofGuild(event.guild))
             }
         }

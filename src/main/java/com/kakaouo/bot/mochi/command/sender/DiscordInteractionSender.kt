@@ -59,9 +59,10 @@ class DiscordInteractionSender(private val interaction: CommandInteractionPayloa
         }
 
         val hook = interaction.hook
+        hook.setEphemeral(ephemeral)
+
         when (builder) {
             is MessageCreateBuilder -> {
-                hook.setEphemeral(ephemeral)
                 hook.sendMessage(builder.build()).submit().await()
             }
             is MessageEditBuilder -> {

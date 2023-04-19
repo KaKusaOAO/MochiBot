@@ -72,8 +72,8 @@ class PlayerManager(val guildManager: GuildManager) : EventListener, AudioEventL
         }
     }
 
-    suspend fun addLavaPlayerSourceToQueueAsync(query: String, source: CommandSource): List<LavaPlayerQueueItem> {
-        val list = LavaPlayerQueueItem.createQueuesFromQuery(manager, query, source)
+    suspend fun addLavaPlayerSourceToQueueAsync(query: String, source: CommandSource, title: String? = null): List<LavaPlayerQueueItem> {
+        val list = LavaPlayerQueueItem.createQueuesFromQuery(manager, query, source, title)
         return queueList(list)
     }
 

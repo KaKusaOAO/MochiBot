@@ -35,7 +35,7 @@ repositories {
 
 dependencies {
     // KiMochi
-    implementation 'com.kakaouo:kimochi:1.0-build.40'
+    implementation 'com.kakaouo:kimochi:1.0-build.41'
 
     // StringTemplate
     implementation 'org.antlr:ST4:4.3.4'
