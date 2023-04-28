@@ -10,6 +10,7 @@ import com.kakaouo.bot.mochi.command.sender.DiscordMessageSender
 import com.kakaouo.bot.mochi.command.sender.IDiscordCommandSender
 import com.kakaouo.bot.mochi.i18n.ILanguageGenerator
 import com.kakaouo.bot.mochi.i18n.ILocalizable
+import com.kakaouo.bot.mochi.texts.TextBuilder
 import com.kakaouo.bot.mochi.texts.Texts
 import com.kakaouo.mochi.texts.LiteralText
 import com.kakaouo.mochi.texts.TextColor
@@ -148,6 +149,15 @@ abstract class Command : ILocalizable {
                     .addWith(createdCommands.size.toString().toText().setColor(TextColor.GREEN))
                     .addWith(Texts.ofGuild(guild))
             )
+
+            Logger.log(Texts.translate("Completed registering %s guild commands for guild %s.") {
+                with {
+                    literal(createdCommands.size.toString()) {
+                        color(TextColor.GREEN)
+                    }
+                }
+                with(Texts.ofGuild(guild))
+            })
         }
 
         suspend fun registerCommandsForDiscordGlobal() {
@@ -158,10 +168,13 @@ abstract class Command : ILocalizable {
 
             client.updateCommands().addCommands(createdCommands).submit().await()
 
-            Logger.log(
-                TranslateText.of("Completed registering %s global commands.")
-                    .addWith(createdCommands.size.toString().toText().setColor(TextColor.GREEN))
-            )
+            Logger.log(Texts.translate("Completed registering %s global commands.") {
+                with {
+                    literal(createdCommands.size.toString()) {
+                        color(TextColor.GREEN)
+                    }
+                }
+            })
         }
 
         fun getCommandLineFromInteraction(interaction: CommandInteraction): String {
